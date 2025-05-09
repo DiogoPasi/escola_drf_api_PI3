@@ -1,0 +1,38 @@
+# Byte-code files
+*.pyc
+__pycache__/
+
+# Virtual environment
+venv/
+.venv/
+env/
+.env/
+
+# Database files
+*.sqlite3
+db.sqlite3
+
+# Django specific
+media/ # User-uploaded files
+staticfiles/ # Collected static files
+# If you used the temp_reports directory example from earlier
+temp_reports/
+
+# Environment variables file (if you use one like .env)
+.env
+
+# IDE-specific files (examples for popular IDEs)
+.idea/ # PyCharm
+.vscode/ # VS Code
+*.sublime-project # Sublime Text
+*.sublime-workspace # Sublime Text
+
+# Operating System files
+.DS_Store # macOS
+Thumbs.db # Windows
+
+# Logs
+*.log
+
+# Backup files
+*~
