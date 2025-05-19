@@ -1,1 +1,1 @@
-web: gunicorn api.wsgi --bind 0.0.0.0:$PORT
+web: gunicorn escola_dashboard.wsgi --bind 0.0.0.0:$PORT
