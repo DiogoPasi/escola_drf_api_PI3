@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny, BasePermission
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
@@ -27,19 +27,35 @@ from .models import (
     Notas
 )
 
-# --- Custom Permissions (Implementar depois de Auth) ---
-# Placeholder
-class IsStaffUser(IsAdminUser): 
-     pass
+# --- Custom Permissions ---
+class IsStaffUser(BasePermission):
+    """Acesso para usuários staff."""
+    def has_permission(self, request, view):
+        # is_staff flag
+        return request.user and request.user.is_authenticated and request.user.is_staff
 
-class IsTeacherUser(IsAuthenticated):
-    pass # Implementation needed
+class IsTeacherUser(BasePermission):
+    def has_permission(self, request, view):
+        # Link com professor_profile
+        return request.user and request.user.is_authenticated and hasattr(request.user, 'professor_profile')
 
-class IsStudentUser(IsAuthenticated):
-    pass # Implementation needed
+class IsStudentUser(BasePermission):
+    def has_permission(self, request, view):
+        # Link aluno_profile
+        return request.user and request.user.is_authenticated and hasattr(request.user, 'aluno_profile')
 
-class IsGuardianUser(IsAuthenticated):
-    pass # Implementation needed
+class IsGuardianUser(BasePermission):
+    def has_permission(self, request, view):
+        # Link responsavel_profile
+        return request.user and request.user.is_authenticated and hasattr(request.user, 'responsavel_profile')
+
+class IsStaffOrTeacher(BasePermission):
+    def has_permission(self, request, view):
+        return IsStaffUser().has_permission(request, view) or IsTeacherUser().has_permission(request, view)
+
+class IsStudentOrGuardian(BasePermission):
+    def has_permission(self, request, view):
+        return IsStudentUser().has_permission(request, view) or IsGuardianUser().has_permission(request, view)
 
 
 # --- ViewSets ---
