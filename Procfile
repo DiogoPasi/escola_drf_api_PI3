@@ -1,1 +1,1 @@
-web: gunicorn api_drf_PI3.wsgi --bind 0.0.0.0:$PORT
+web: gunicorn api.wsgi --bind 0.0.0.0:$PORT
