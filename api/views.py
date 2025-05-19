@@ -56,6 +56,16 @@ class IsStaffOrTeacher(BasePermission):
 class IsStudentOrGuardian(BasePermission):
     def has_permission(self, request, view):
         return IsStudentUser().has_permission(request, view) or IsGuardianUser().has_permission(request, view)
+    
+class CanViewData(BasePermission):
+    def has_permission(self, request, view):
+        # Usuário deve estar autenticado
+        return request.user and request.user.is_authenticated and (
+            request.user.is_staff or
+            hasattr(request.user, 'professor_profile') or
+            hasattr(request.user, 'aluno_profile') or
+            hasattr(request.user, 'responsavel_profile')
+        )
 
 
 # --- ViewSets ---
@@ -79,7 +89,7 @@ class ResponsaveisViewSet(viewsets.ModelViewSet):
     queryset = Responsaveis.objects.all()
     serializer_class = ResponsaveisSerializer
     # Admin CRUD, Responsável View próprias informações
-    permission_classes = [IsAuthenticated, IsStaffUser | IsGuardianUser] # authentication
+    permission_classes = [IsAuthenticated, CanViewData] # authentication
 
     def get_queryset(self):
         user = self.request.user
@@ -94,12 +104,9 @@ class ResponsaveisViewSet(viewsets.ModelViewSet):
         return Responsaveis.objects.none() # Return empty queryset
 
     def get_permissions(self):
-        # (GET, HEAD, OPTIONS) para non-Staff
-        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-             # Apenas Admin
-             return [IsStaffUser()]
-        # Authenticated(Incluindo Responsáveis)
-        return [IsAuthenticated(), IsStaffUser | IsGuardianUser]
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [IsAuthenticated(), CanViewData()]
+        return [IsStaffUser()]
 
 
 class AlunosViewSet(viewsets.ModelViewSet):
@@ -107,7 +114,7 @@ class AlunosViewSet(viewsets.ModelViewSet):
     queryset = Alunos.objects.all()
     serializer_class = AlunosSerializer
     # Admin CRUD | Outros View dados relacionados
-    permission_classes = [IsAuthenticated, IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
+    permission_classes = [IsAuthenticated, CanViewData]
 
     def get_queryset(self):
         user = self.request.user
@@ -132,18 +139,16 @@ class AlunosViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         # (GET, HEAD, OPTIONS) para não Admins
-        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-             # Admin
-            return [IsStaffUser()] 
-        # Authenticated(Todos)
-        return [IsAuthenticated(), IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+             return [IsAuthenticated(), CanViewData()]
+        return [IsStaffUser()]
 
 
 class MateriasViewSet(viewsets.ModelViewSet):
     """ViewSet Materias"""
     queryset = Materias.objects.all()
     serializer_class = MateriasSerializer
-    permission_classes = [IsAuthenticated, IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
+    permission_classes = [IsAuthenticated, CanViewData]
 
     def get_queryset(self):
         user = self.request.user
@@ -166,15 +171,15 @@ class MateriasViewSet(viewsets.ModelViewSet):
         return Materias.objects.none()
 
     def get_permissions(self):
-        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            return [IsStaffUser()]
-        return [IsAuthenticated(), IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+             return [IsAuthenticated(), CanViewData()]
+        return [IsStaffUser()]
 
 
 class ClassesViewSet(viewsets.ModelViewSet):
     queryset = Classes.objects.all()
     serializer_class = ClassesSerializer
-    permission_classes = [IsAuthenticated, IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
+    permission_classes = [IsAuthenticated, CanViewData]
 
     def get_queryset(self):
         user = self.request.user
@@ -190,15 +195,15 @@ class ClassesViewSet(viewsets.ModelViewSet):
 
 
     def get_permissions(self):
-        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            return [IsStaffUser()]
-        return [IsAuthenticated(), IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [IsAuthenticated(), CanViewData()]
+        return [IsStaffUser()]
 
 
 class AvaliacoesViewSet(viewsets.ModelViewSet):
     queryset = Avaliacoes.objects.all()
     serializer_class = AvaliacoesSerializer
-    permission_classes = [IsAuthenticated, IsStaffOrTeacher | IsStudentOrGuardian]
+    permission_classes = [IsAuthenticated, CanViewData]
 
     def get_queryset(self):
         user = self.request.user
@@ -222,15 +227,15 @@ class AvaliacoesViewSet(viewsets.ModelViewSet):
         return Avaliacoes.objects.none()
 
     def get_permissions(self):
-        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            return [IsStaffOrTeacher()]
-        return [IsAuthenticated(), IsStaffOrTeacher | IsStudentOrGuardian]
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [IsAuthenticated(), CanViewData()]
+        return [IsStaffOrTeacher()]
 
 
 class NotasViewSet(viewsets.ModelViewSet):
     queryset = Notas.objects.all()
     serializer_class = NotasSerializer
-    permission_classes = [IsAuthenticated, IsStaffOrTeacher | IsStudentOrGuardian]
+    permission_classes = [IsAuthenticated, CanViewData]
 
     def get_queryset(self):
         user = self.request.user
@@ -258,6 +263,6 @@ class NotasViewSet(viewsets.ModelViewSet):
         return Notas.objects.none()
 
     def get_permissions(self):
-        if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            return [IsStaffOrTeacher()]
-        return [IsAuthenticated(), IsStaffOrTeacher | IsStudentOrGuardian]
+        if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
+            return [IsAuthenticated(), CanViewData()]
+        return [IsStaffOrTeacher()]
