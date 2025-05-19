@@ -30,6 +30,7 @@ class ResponsaveisSerializer(serializers.ModelSerializer):
 
 class AlunosSerializer(serializers.ModelSerializer):
     # Para ManyToManyField como 'responsaveis', '__all__' serão mostrados os IDs. Ler: SlugRelatedField para melhor customização.
+    responsaveis = serializers.StringRelatedField(many=True, read_only=True)
     class Meta:
         model = Alunos
         fields = '__all__'
@@ -43,6 +44,9 @@ class MateriasSerializer(serializers.ModelSerializer):
 
 class ClassesSerializer(serializers.ModelSerializer):
     # O mesmo para ManyToManyFields como 'alunos', 'professores', 'materias' - '__all__' mostra IDs
+    alunos = serializers.StringRelatedField(many=True, read_only=True)
+    professores = serializers.StringRelatedField(many=True, read_only=True)
+    materias = serializers.StringRelatedField(many=True, read_only=True)
     class Meta:
         model = Classes
         fields = '__all__'
@@ -51,6 +55,7 @@ class ClassesSerializer(serializers.ModelSerializer):
 
 class AvaliacoesSerializer(serializers.ModelSerializer):
     # responsavel_por = serializers.StringRelatedField(read_only=True) # Exemplo para mostrar o nome do professor
+    responsavel_por = serializers.StringRelatedField(read_only=True)
     class Meta:
         model = Avaliacoes
         fields = '__all__'
@@ -58,9 +63,9 @@ class AvaliacoesSerializer(serializers.ModelSerializer):
 
 class NotasSerializer(serializers.ModelSerializer):
     # Usar StringRelatedField para mais detalhes
-    # aluno = serializers.StringRelatedField(read_only=True)
-    # avaliacao = serializers.StringRelatedField(read_only=True)
-    # atribuida_por = serializers.StringRelatedField(read_only=True)
+    aluno = serializers.StringRelatedField(read_only=True)
+    avaliacao = serializers.StringRelatedField(read_only=True)
+    atribuida_por = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Notas
