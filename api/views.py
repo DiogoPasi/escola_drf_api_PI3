@@ -64,14 +64,14 @@ class AdministracaoViewSet(viewsets.ModelViewSet):
     """ViewSet Administracao - Full CRUD Para Administração."""
     queryset = Administracao.objects.all()
     serializer_class = AdministracaoSerializer
-    permission_classes = [IsStaffUser] # Placeholder
+    permission_classes = [IsStaffUser]
 
 
 class ProfessoresViewSet(viewsets.ModelViewSet):
     """ViewSet Professores - Full CRUD Para Administração."""
     queryset = Professores.objects.all()
     serializer_class = ProfessoresSerializer
-    permission_classes = [IsStaffUser] # Placeholder
+    permission_classes = [IsStaffUser]
 
 
 class ResponsaveisViewSet(viewsets.ModelViewSet):
@@ -79,15 +79,15 @@ class ResponsaveisViewSet(viewsets.ModelViewSet):
     queryset = Responsaveis.objects.all()
     serializer_class = ResponsaveisSerializer
     # Admin CRUD, Responsável View próprias informações
-    permission_classes = [IsAuthenticated] # Placeholder - authentication
+    permission_classes = [IsAuthenticated, IsStaffUser | IsGuardianUser] # authentication
 
     def get_queryset(self):
         user = self.request.user
         # Se usuário(Admin)
-        if user and user.is_staff: # Placeholder check Para Administração
+        if user.is_staff: # check Para Administração
             return Responsaveis.objects.all()
         # Se usuário (Responsável)
-        if hasattr(user, 'responsavel'): # Placeholder check se usuário tem link com Responsável
+        if hasattr(user, 'responsavel_profile'): # check se usuário tem link com Responsável
              return Responsaveis.objects.filter(pk=user.responsavel.pk)
 
         # Estudantes e professores
@@ -95,15 +95,11 @@ class ResponsaveisViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         # (GET, HEAD, OPTIONS) para non-Staff
-        user = self.request.user
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
              # Apenas Admin
-             if not (user and user.is_staff):
-                return [IsStaffUser()]
+             return [IsStaffUser()]
         # Authenticated(Incluindo Responsáveis)
-        return [IsAuthenticated()]
-
-    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'] # Allow all Para Administração, restrito por get_permissions
+        return [IsAuthenticated(), IsStaffUser | IsGuardianUser]
 
 
 class AlunosViewSet(viewsets.ModelViewSet):
@@ -111,60 +107,56 @@ class AlunosViewSet(viewsets.ModelViewSet):
     queryset = Alunos.objects.all()
     serializer_class = AlunosSerializer
     # Admin CRUD | Outros View dados relacionados
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
 
     def get_queryset(self):
         user = self.request.user
         # (Admin)
-        if user and user.is_staff:
+        if user.is_staff:
             return Alunos.objects.all()
         # Professor, return Estudantes na Classe
         if hasattr(user, 'professor'):
-             teacher_classes = user.professor.classes.all()
+             teacher_classes = user.professor_profile.classes.all()
              student_ids = set()
              for class_obj in teacher_classes:
                  student_ids.update(class_obj.alunos.values_list('id', flat=True))
              return Alunos.objects.filter(id__in=list(student_ids))
         # Aluno, return dados relacionados ao usuário
-        if hasattr(user, 'aluno'): 
-             return Alunos.objects.filter(pk=user.aluno.pk)
+        if hasattr(user, 'aluno_profile'): 
+             return Alunos.objects.filter(pk=user.aluno_profile.pk)
         # Responsável, return link Alunos
-        if hasattr(user, 'responsavel'): 
+        if hasattr(user, 'responsavel_profile'): 
              return user.responsavel.alunos.all()
 
-        return Alunos.objects.none() # Return empty queryset se not authorized ou linked
+        return Alunos.objects.none()
 
     def get_permissions(self):
         # (GET, HEAD, OPTIONS) para não Admins
-        user = self.request.user
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
              # Admin
-             if not (user and user.is_staff):
-                return [IsStaffUser()] 
+            return [IsStaffUser()] 
         # Authenticated(Todos)
-        return [IsAuthenticated()]
-
-    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+        return [IsAuthenticated(), IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
 
 
 class MateriasViewSet(viewsets.ModelViewSet):
     """ViewSet Materias"""
     queryset = Materias.objects.all()
     serializer_class = MateriasSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
 
     def get_queryset(self):
         user = self.request.user
-        if user and (user.is_staff or hasattr(user, 'professor')):
+        if user.is_staff or hasattr(user, 'professor_profile'):
             return Materias.objects.all()
-        if hasattr(user, 'aluno'):
-            student_classes = user.aluno.classes.all()
+        if hasattr(user, 'aluno_profile'):
+            student_classes = user.aluno_profile.classes.all()
             subject_ids = set()
             for class_obj in student_classes:
                 subject_ids.update(class_obj.materias.values_list('id', flat=True))
             return Materias.objects.filter(id__in=list(subject_ids))
-        if hasattr(user, 'responsavel'):
-            student_ids = user.responsavel.alunos.values_list('id', flat=True)
+        if hasattr(user, 'responsavel_profile'):
+            student_ids = user.responsavel_profile.alunos.values_list('id', flat=True)
             student_classes = Classes.objects.filter(alunos__id__in=list(student_ids))
             subject_ids = set()
             for class_obj in student_classes:
@@ -174,61 +166,53 @@ class MateriasViewSet(viewsets.ModelViewSet):
         return Materias.objects.none()
 
     def get_permissions(self):
-        user = self.request.user
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-             if not (user and user.is_staff):
-                return [IsStaffUser()]
-        return [IsAuthenticated()]
-
-    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+            return [IsStaffUser()]
+        return [IsAuthenticated(), IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
 
 
 class ClassesViewSet(viewsets.ModelViewSet):
     queryset = Classes.objects.all()
     serializer_class = ClassesSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
 
     def get_queryset(self):
         user = self.request.user
-        if user and (user.is_staff or hasattr(user, 'professor')):
+        if user.is_staff or hasattr(user, 'professor_profile'):
             return Classes.objects.all()
-        if hasattr(user, 'aluno'):
-            return user.aluno.classes.all()
-        if hasattr(user, 'responsavel'):
-            student_ids = user.responsavel.alunos.values_list('id', flat=True)
+        if hasattr(user, 'aluno_profile'):
+            return user.aluno_profil.classes.all()
+        if hasattr(user, 'responsavel_profile'):
+            student_ids = user.responsavel_profile.alunos.values_list('id', flat=True)
             return Classes.objects.filter(alunos__id__in=list(student_ids)).distinct()
 
         return Classes.objects.none()
 
 
     def get_permissions(self):
-        user = self.request.user
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-             if not (user and user.is_staff):
-                return [IsStaffUser()]
-        return [IsAuthenticated()]
-
-    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+            return [IsStaffUser()]
+        return [IsAuthenticated(), IsStaffUser | IsTeacherUser | IsStudentOrGuardian]
 
 
 class AvaliacoesViewSet(viewsets.ModelViewSet):
     queryset = Avaliacoes.objects.all()
     serializer_class = AvaliacoesSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaffOrTeacher | IsStudentOrGuardian]
 
     def get_queryset(self):
         user = self.request.user
-        if user and (user.is_staff or hasattr(user, 'professor')):
+        if user.is_staff or hasattr(user, 'professor_profile'):
             return Avaliacoes.objects.all()
-        if hasattr(user, 'aluno'):
-            student_classes = user.aluno.classes.all()
+        if hasattr(user, 'aluno_profile'):
+            student_classes = user.aluno_profile.classes.all()
             subject_ids = set()
             for class_obj in student_classes:
                 subject_ids.update(class_obj.materias.values_list('id', flat=True))
             return Avaliacoes.objects.filter(Q(responsavel_por__classes__in=student_classes) | Q(materias__id__in=list(subject_ids))).distinct()
 
-        if hasattr(user, 'responsavel'):
-            student_ids = user.responsavel.alunos.values_list('id', flat=True)
+        if hasattr(user, 'responsavel_profile'):
+            student_ids = user.responsavel_profile.alunos.values_list('id', flat=True)
             student_classes = Classes.objects.filter(alunos__id__in=list(student_ids))
             subject_ids = set()
             for class_obj in student_classes:
@@ -238,29 +222,25 @@ class AvaliacoesViewSet(viewsets.ModelViewSet):
         return Avaliacoes.objects.none()
 
     def get_permissions(self):
-        user = self.request.user
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not (user and user.is_staff or hasattr(user, 'professor')):
-                 return [IsStaffUser()]
-        return [IsAuthenticated()]
-
-    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+            return [IsStaffOrTeacher()]
+        return [IsAuthenticated(), IsStaffOrTeacher | IsStudentOrGuardian]
 
 
 class NotasViewSet(viewsets.ModelViewSet):
     queryset = Notas.objects.all()
     serializer_class = NotasSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsStaffOrTeacher | IsStudentOrGuardian]
 
     def get_queryset(self):
         user = self.request.user
-        if user and user.is_staff:
+        if user.is_staff:
             return Notas.objects.all()
-        if hasattr(user, 'professor'):
+        if hasattr(user, 'professor_profile'):
              # Option 1: Notas por Professor
-             assigned_notes = Notas.objects.filter(atribuida_por=user.professor)
+             assigned_notes = Notas.objects.filter(atribuida_por=user.professor_profile)
              # Option 2: Notas por Aluno na Classe desse Professor
-             teacher_classes = user.professor.classes.all()
+             teacher_classes = user.professor_profile.classes.all()
              student_ids = set()
              for class_obj in teacher_classes:
                  student_ids.update(class_obj.alunos.values_list('id', flat=True))
@@ -268,20 +248,16 @@ class NotasViewSet(viewsets.ModelViewSet):
              # Combinando
              return (assigned_notes | notes_for_my_students).distinct()
         # Aluno, return Notas
-        if hasattr(user, 'aluno'):
-             return Notas.objects.filter(aluno=user.aluno)
+        if hasattr(user, 'aluno_profile'):
+             return Notas.objects.filter(aluno=user.aluno_profile)
         # Responsável, return link Alunos
-        if hasattr(user, 'responsavel'):
-             student_ids = user.responsavel.alunos.values_list('id', flat=True)
+        if hasattr(user, 'responsavel_profile'):
+             student_ids = user.responsavel_profile.alunos.values_list('id', flat=True)
              return Notas.objects.filter(aluno__id__in=list(student_ids))
 
         return Notas.objects.none()
 
     def get_permissions(self):
-        user = self.request.user
         if self.request.method not in ['GET', 'HEAD', 'OPTIONS']:
-            if not (user and user.is_staff or hasattr(user, 'professor')):
-                 return [IsStaffUser()]
-        return [IsAuthenticated()]
-
-    http_method_names = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options']
+            return [IsStaffOrTeacher()]
+        return [IsAuthenticated(), IsStaffOrTeacher | IsStudentOrGuardian]
