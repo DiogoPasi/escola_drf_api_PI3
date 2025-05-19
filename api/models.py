@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Administracao(models.Model):
     """Modelo para funcionários administrativos da escola."""
@@ -6,6 +7,7 @@ class Administracao(models.Model):
     cpf = models.CharField(max_length=14, unique=True) # Assumindo formato padrão de CPF
     email = models.EmailField(unique=True)
     celular = models.CharField(max_length=20, blank=False, null=False) # Campo obrigatório
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='administracao_profile', null=True, blank=True)
 
     def __str__(self):
         return self.nome
@@ -16,6 +18,7 @@ class Professores(models.Model):
     cpf = models.CharField(max_length=14, unique=True)
     email = models.EmailField(unique=True)
     celular = models.CharField(max_length=20, blank=False, null=False) # Campo obrigatório
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='professor_profile', null=True, blank=True)
 
     def __str__(self):
         return self.nome
@@ -26,6 +29,7 @@ class Responsaveis(models.Model):
     cpf = models.CharField(max_length=14, unique=True)
     email = models.EmailField(unique=True, blank=False, null=False) # Campo obrigatório
     celular = models.CharField(max_length=20, blank=False, null=False) # Campo obrigatório
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='responsavel_profile', null=True, blank=True)
 
     def __str__(self):
         return self.nome
@@ -38,6 +42,7 @@ class Alunos(models.Model):
     email = models.EmailField(unique=True, blank=True, null=True) # Campo opcional
     celular = models.CharField(max_length=20, blank=True, null=True) # Campo opcional
     ra = models.CharField(max_length=50, unique=True) # Registro Acadêmico (RA) do aluno
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='aluno_profile', null=True, blank=True)
 
     # Um aluno pode ter vários responsáveis, e um responsável pode ter vários alunos
     responsaveis = models.ManyToManyField(Responsaveis, related_name='alunos')
