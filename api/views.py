@@ -1,9 +1,11 @@
 from django.shortcuts import render
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny, BasePermission
+from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
+from django.contrib.auth.models import User
 # Serializers 
 from .serializers import (
     AdministracaoSerializer,
@@ -13,7 +15,8 @@ from .serializers import (
     MateriasSerializer,
     ClassesSerializer,
     AvaliacoesSerializer,
-    NotasSerializer
+    NotasSerializer,
+    RegistroUsuarioSerializer,
 )
 # Models
 from .models import (
@@ -266,3 +269,14 @@ class NotasViewSet(viewsets.ModelViewSet):
         if self.request.method in ['GET', 'HEAD', 'OPTIONS']:
             return [IsAuthenticated(), CanViewData()]
         return [IsStaffOrTeacher()]
+
+
+# Registro de Usuários
+
+class RegistroUsuarioView(CreateAPIView):
+    """
+    Endpoint para cadastro de novos usuários.
+    """
+    queryset = User.objects.all()
+    serializer_class = RegistroUsuarioSerializer
+    permission_classes = [AllowAny]

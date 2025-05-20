@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import (
     Administracao,
     Professores,
@@ -71,3 +72,44 @@ class NotasSerializer(serializers.ModelSerializer):
         model = Notas
         fields = '__all__'
         # fields = ['id', 'nota', 'aluno', 'avaliacao', 'atribuida_por', 'data_registro']
+
+
+# Registro de Usuários
+
+class RegistroUsuarioSerializer(serializers.ModelSerializer):
+    """
+    Serializer para criação de usuários com hashing para senhas.
+    Usa os nomes de campo padrão do modelo User do Django: 'password', 'first_name', 'last_name'.
+    """
+    password = serializers.CharField(write_only=True, required=True, help_text="Letras, números e @/./+/-/_ somente.")
+    email = serializers.EmailField(required=False, allow_blank=True)
+    first_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+    last_name = serializers.CharField(required=False, allow_blank=True, max_length=150)
+
+
+    class Meta:
+        model = User
+        fields = ('username', 'password', 'email', 'first_name', 'last_name')
+        extra_kwargs = {
+            'username': {'required': True},
+            'password': {'write_only': True},
+            'first_name': {'required': False},
+            'last_name': {'required': False},
+        }
+
+    def create(self, validated_data):
+        # Criação de um novo usuário
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            email=validated_data.get('email', ''),
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', '')
+        )
+        return user
+
+    def validate_username(self, value):
+        # Username único
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username já existe.")
+        return value
