@@ -6,6 +6,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Q
 from django.contrib.auth.models import User
+# Custom JWT
+from rest_framework_simplejwt.views import TokenObtainPairView
+from .serializers import MyTokenObtainPairSerializer
 # Serializers 
 from .serializers import (
     AdministracaoSerializer,
@@ -280,3 +283,11 @@ class RegistroUsuarioView(CreateAPIView):
     queryset = User.objects.all()
     serializer_class = RegistroUsuarioSerializer
     permission_classes = [AllowAny]
+
+
+# --- Custom JWT View ---
+class MyTokenObtainPairView(TokenObtainPairView):
+    """
+    Custom view for obtaining JWT tokens, using MyTokenObtainPairSerializer.
+    """
+    serializer_class = MyTokenObtainPairSerializer

@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth.models import User
 from .models import (
     Administracao,
@@ -113,3 +114,69 @@ class RegistroUsuarioSerializer(serializers.ModelSerializer):
         if User.objects.filter(username=value).exists():
             raise serializers.ValidationError("Username já existe.")
         return value
+    
+
+# --- Custom JWT Serializer ---
+class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Customizes the JWT serializer to include user role and other details.
+    """
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        # Determine the user's role based on linked profiles
+        user_role = 'unknown' # Default role
+        if hasattr(user, 'administracao_profile'):
+            user_role = 'admin'
+        elif hasattr(user, 'professor_profile'):
+            user_role = 'teacher'
+        elif hasattr(user, 'aluno_profile'):
+            user_role = 'student'
+        elif hasattr(user, 'responsavel_profile'):
+            user_role = 'guardian'
+        elif user.is_staff: # Fallback for Django staff users not linked to Administracao
+            user_role = 'admin'
+
+        token['user_id'] = user.id
+        token['username'] = user.username
+        token['email'] = user.email
+        token['first_name'] = user.first_name
+        token['last_name'] = user.last_name
+        token['user_role'] = user_role # Add the determined role
+
+        return token
+
+    def validate(self, attrs):
+        # The default validate method authenticates the user and generates tokens.
+        # It calls get_token() internally.
+        data = super().validate(attrs)
+
+        # After super().validate(), self.user will be set to the authenticated user.
+        # We can now add the custom data to the response.
+        # The custom claims are already added to the token by get_token,
+        # but we also want them at the top level of the response for easier frontend access.
+
+        # Determine the user's role based on linked profiles
+        user_role = 'unknown' # Default role
+        if hasattr(self.user, 'administracao_profile'):
+            user_role = 'admin'
+        elif hasattr(self.user, 'professor_profile'):
+            user_role = 'teacher'
+        elif hasattr(self.user, 'aluno_profile'):
+            user_role = 'student'
+        elif hasattr(self.user, 'responsavel_profile'):
+            user_role = 'guardian'
+        elif self.user.is_staff: # Fallback for Django staff users not linked to Administracao
+            user_role = 'admin'
+
+
+        data['user_id'] = self.user.id
+        data['username'] = self.user.username
+        data['email'] = self.user.email
+        data['first_name'] = self.user.first_name
+        data['last_name'] = self.user.last_name
+        data['user_role'] = user_role # Add the determined role to the response
+
+        return data
