@@ -12,6 +12,12 @@ from .models import (
     Notas
 )
 
+# --- New: Serializer for Django's User model ---
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']
+
 class AdministracaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Administracao
